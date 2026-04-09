@@ -29,11 +29,6 @@ export async function POST(
       return NextResponse.json({ error: 'Pact is not active' }, { status: 400 })
     }
 
-    const now = Math.floor(Date.now() / 1000)
-    if (pact.deadline > now) {
-      return NextResponse.json({ error: 'Deadline has not passed yet' }, { status: 400 })
-    }
-
     if (!getConnection(pact.creator)) {
       return NextResponse.json(
         { error: 'No Strava connection for pact creator' },
@@ -42,13 +37,24 @@ export async function POST(
     }
 
     const { actual } = await getActivityProgress(pact.creator, pact.goalType, pact.createdAt)
+    const goalMet = actual >= Number(pact.targetValue)
+    const now = Math.floor(Date.now() / 1000)
+
+    // Early resolution only allowed if goal is met; penalty requires deadline
+    if (!goalMet && pact.deadline > now) {
+      return NextResponse.json(
+        { error: 'Deadline has not passed and goal not yet met' },
+        { status: 400 }
+      )
+    }
+
     const receipt = await submitResolve(pactId, actual)
 
     return NextResponse.json({
       success: true,
       pactId,
       actualValue: actual,
-      goalMet: actual >= Number(pact.targetValue),
+      goalMet,
       txHash: receipt.hash,
     })
   } catch (error) {
