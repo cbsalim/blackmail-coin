@@ -28,6 +28,16 @@ export const PACT_ABI = [
   },
   {
     type: 'function',
+    name: 'resolve',
+    inputs: [
+      { name: 'pactId', type: 'uint256' },
+      { name: 'actualValue', type: 'uint256' },
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
     name: 'getPact',
     inputs: [{ name: 'pactId', type: 'uint256' }],
     outputs: [
