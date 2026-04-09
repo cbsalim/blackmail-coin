@@ -71,24 +71,51 @@ function CreatePageInner() {
 
   useEffect(() => {
     if (searchParams.get('strava') !== 'connected') return
-    setStravaConnected(true)
 
     const accessToken = searchParams.get('strava_access_token')
     const wallet = searchParams.get('strava_wallet')
-    if (!accessToken || !wallet) return
+    if (!accessToken || !wallet) {
+      setStravaConnected(true)
+      return
+    }
 
-    fetch('/api/strava/manual-connect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        wallet,
-        accessToken,
-        refreshToken: searchParams.get('strava_refresh_token') ?? accessToken,
-        stravaId: searchParams.get('strava_id') ? Number(searchParams.get('strava_id')) : null,
-      }),
-    }).catch(() => {})
+    setCheckingStrava(true)
 
-    // Clean up token params from URL
+    const relayTokens = async () => {
+      try {
+        const relayResponse = await fetch('/api/strava/manual-connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet,
+            accessToken,
+            refreshToken: searchParams.get('strava_refresh_token') ?? accessToken,
+            expiresAt: searchParams.get('strava_expires_at')
+              ? Number(searchParams.get('strava_expires_at'))
+              : null,
+            stravaId: searchParams.get('strava_id') ? Number(searchParams.get('strava_id')) : null,
+          }),
+        })
+
+        if (!relayResponse.ok) {
+          throw new Error('Failed to persist Strava connection')
+        }
+
+        const statusResponse = await fetch(`/api/strava/status/${wallet}`)
+        const statusData = await statusResponse.json()
+        setStravaConnected(Boolean(statusData.connected))
+      } catch {
+        setStravaConnected(false)
+      } finally {
+        setCheckingStrava(false)
+      }
+    }
+
+    relayTokens().catch(() => {
+      setCheckingStrava(false)
+      setStravaConnected(false)
+    })
+
     const cleanUrl = new URL(window.location.href)
     cleanUrl.searchParams.delete('strava_wallet')
     cleanUrl.searchParams.delete('strava_access_token')
