@@ -116,6 +116,16 @@ function getConnectionKey(wallet: string): string {
   return `strava:${normalizeWallet(wallet)}`
 }
 
+export async function hasStoredConnection(wallet: string): Promise<boolean> {
+  const normalizedWallet = normalizeWallet(wallet)
+
+  if (isKvConfigured()) {
+    return Boolean(await kv.get<StravaConnectionInput>(getConnectionKey(normalizedWallet)))
+  }
+
+  return getMemoryStore().has(normalizedWallet)
+}
+
 function getSharedDemoConnection(wallet: string): StravaConnection | null {
   if (!SHARED_DEMO_CONNECTION) {
     return null

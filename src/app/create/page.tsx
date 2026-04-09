@@ -70,59 +70,9 @@ function CreatePageInner() {
   }, [address])
 
   useEffect(() => {
-    if (searchParams.get('strava') !== 'connected') return
-
-    const accessToken = searchParams.get('strava_access_token')
-    const wallet = searchParams.get('strava_wallet')
-    if (!accessToken || !wallet) {
+    if (searchParams.get('strava') === 'connected') {
       setStravaConnected(true)
-      return
     }
-
-    setCheckingStrava(true)
-
-    const relayTokens = async () => {
-      try {
-        const relayResponse = await fetch('/api/strava/manual-connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            wallet,
-            accessToken,
-            refreshToken: searchParams.get('strava_refresh_token') ?? accessToken,
-            expiresAt: searchParams.get('strava_expires_at')
-              ? Number(searchParams.get('strava_expires_at'))
-              : null,
-            stravaId: searchParams.get('strava_id') ? Number(searchParams.get('strava_id')) : null,
-          }),
-        })
-
-        if (!relayResponse.ok) {
-          throw new Error('Failed to persist Strava connection')
-        }
-
-        const statusResponse = await fetch(`/api/strava/status/${wallet}`)
-        const statusData = await statusResponse.json()
-        setStravaConnected(Boolean(statusData.connected))
-      } catch {
-        setStravaConnected(false)
-      } finally {
-        setCheckingStrava(false)
-      }
-    }
-
-    relayTokens().catch(() => {
-      setCheckingStrava(false)
-      setStravaConnected(false)
-    })
-
-    const cleanUrl = new URL(window.location.href)
-    cleanUrl.searchParams.delete('strava_wallet')
-    cleanUrl.searchParams.delete('strava_access_token')
-    cleanUrl.searchParams.delete('strava_refresh_token')
-    cleanUrl.searchParams.delete('strava_expires_at')
-    cleanUrl.searchParams.delete('strava_id')
-    window.history.replaceState({}, '', cleanUrl.toString())
   }, [searchParams])
 
   const goalOption = GOAL_TYPES.find((g) => g.value === form.goalType)!
@@ -305,9 +255,7 @@ function CreatePageInner() {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-medium">Strava</p>
-                <p className="text-sm text-gray-500">
-                  Demo path: preload this wallet in <code>STRAVA_CONNECTIONS_JSON</code>.
-                </p>
+                <p className="text-sm text-gray-500">Required to verify activity.</p>
               </div>
               {checkingStrava ? (
                 <span className="text-gray-400 text-sm">Checking...</span>
@@ -323,12 +271,6 @@ function CreatePageInner() {
                 </button>
               )}
             </div>
-            {!stravaConnected && isConnected && !checkingStrava && (
-              <p className="text-xs text-gray-400 mt-3">
-                For the demo, use the same wallet address here and in <code>STRAVA_CONNECTIONS_JSON</code>.
-                Live OAuth is still available, but not required.
-              </p>
-            )}
           </div>
 
           <button

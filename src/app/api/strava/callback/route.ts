@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getRequiredEnv } from '@/server/env'
-import { upsertConnection } from '@/server/store'
+
+const STRAVA_CONNECTED_WALLETS_COOKIE = 'strava_connected_wallets'
+
+function parseConnectedWalletsCookie(rawValue: string | undefined): string[] {
+  if (!rawValue) {
+    return []
+  }
+
+  return rawValue
+    .split(',')
+    .map((wallet) => wallet.trim().toLowerCase())
+    .filter((wallet) => /^0x[0-9a-fA-F]{40}$/.test(wallet))
+}
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-interface StravaOAuthResponse {
-  access_token: string
-  refresh_token: string
-  expires_at: number
-  athlete?: {
-    id?: number
-  }
-}
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
@@ -49,25 +52,22 @@ export async function GET(request: NextRequest) {
       throw new Error(await response.text())
     }
 
-    const data = (await response.json()) as StravaOAuthResponse
-
-    await upsertConnection({
-      wallet,
-      stravaId: data.athlete?.id ?? null,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresAt: data.expires_at,
-    })
+    await response.json()
 
     createUrl.searchParams.set('strava', 'connected')
-    createUrl.searchParams.set('strava_wallet', wallet)
-    createUrl.searchParams.set('strava_access_token', data.access_token)
-    createUrl.searchParams.set('strava_refresh_token', data.refresh_token)
-    createUrl.searchParams.set('strava_expires_at', String(data.expires_at))
-    if (data.athlete?.id) {
-      createUrl.searchParams.set('strava_id', String(data.athlete.id))
-    }
-    return NextResponse.redirect(createUrl)
+    const redirect = NextResponse.redirect(createUrl)
+    const connectedWallets = new Set(
+      parseConnectedWalletsCookie(request.cookies.get(STRAVA_CONNECTED_WALLETS_COOKIE)?.value)
+    )
+    connectedWallets.add(wallet.toLowerCase())
+    redirect.cookies.set(STRAVA_CONNECTED_WALLETS_COOKIE, Array.from(connectedWallets).join(','), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+    })
+    return redirect
   } catch (error) {
     console.error('Strava OAuth error:', error)
     createUrl.searchParams.set('strava', 'error')
