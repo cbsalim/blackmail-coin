@@ -25,6 +25,19 @@ declare global {
 
 const WALLET_INDEX_KEY = 'strava:wallets'
 
+// Demo-only fallback so the Vercel deploy can resolve progress even if KV writes are flaky.
+const HARDCODED_DEMO_CONNECTIONS: StravaConnectionInput[] = [
+  {
+    wallet: '0x0e355a24d50bf972b46b031f5406773201b7ad73',
+    stravaId: 1041864364,
+    accessToken: '280b24e6b34b282f42227efedc95e75252258a67',
+    refreshToken: 'e7172939b20a4f6414778111fe2eec69f000a821',
+    expiresAt: 1775776579,
+  },
+]
+
+const SHARED_DEMO_CONNECTION = HARDCODED_DEMO_CONNECTIONS[0]
+
 function normalizeWallet(wallet: string): string {
   const normalized = `${wallet || ''}`.toLowerCase()
   if (!/^0x[0-9a-fA-F]{40}$/.test(normalized)) {
@@ -58,19 +71,23 @@ function normalizeConnection(input: StravaConnectionInput): StravaConnection {
 
 function parseSeedConnections(): Map<string, StravaConnection> {
   const raw = process.env.STRAVA_CONNECTIONS_JSON
-  if (!raw) {
-    return new Map()
-  }
+  const envEntries = (() => {
+    if (!raw) {
+      return [] as StravaConnectionInput[]
+    }
 
-  const parsed = JSON.parse(raw) as unknown
-  const entries = Array.isArray(parsed)
-    ? parsed
-    : Object.entries((parsed ?? {}) as Record<string, StravaConnectionInput>).map(
-        ([wallet, value]) => ({
-          wallet,
-          ...value,
-        })
-      )
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed)
+      ? (parsed as StravaConnectionInput[])
+      : Object.entries((parsed ?? {}) as Record<string, StravaConnectionInput>).map(
+          ([wallet, value]) => ({
+            wallet,
+            ...value,
+          })
+        )
+  })()
+
+  const entries = [...HARDCODED_DEMO_CONNECTIONS, ...envEntries]
 
   return new Map(
     entries.map((entry) => {
@@ -97,6 +114,17 @@ function isKvConfigured(): boolean {
 
 function getConnectionKey(wallet: string): string {
   return `strava:${normalizeWallet(wallet)}`
+}
+
+function getSharedDemoConnection(wallet: string): StravaConnection | null {
+  if (!SHARED_DEMO_CONNECTION) {
+    return null
+  }
+
+  return normalizeConnection({
+    ...SHARED_DEMO_CONNECTION,
+    wallet,
+  })
 }
 
 async function getWalletIndex(): Promise<string[]> {
@@ -134,7 +162,7 @@ export async function getConnection(wallet: string): Promise<StravaConnection | 
     }
   }
 
-  return getMemoryStore().get(normalizedWallet) ?? null
+  return getMemoryStore().get(normalizedWallet) ?? getSharedDemoConnection(normalizedWallet)
 }
 
 export async function upsertConnection(
