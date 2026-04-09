@@ -2,108 +2,80 @@
 
 Stake USDC on a Strava goal. Do it, or pay up.
 
-You set a goal (miles run, rides completed, total activities), a deadline, and a USDC stake. If you hit your target, you get your money back. If you miss, it goes to whoever you named — a burn address, a charity, or someone who will enjoy watching you lose.
-
-After the deadline, a backend oracle fetches your Strava data and submits the result on-chain. If the oracle goes quiet, anyone can claim a refund after a 7-day grace period — enforced by the contract, not by trust.
+You set a goal, deadline, stake, and penalty recipient. If you hit your target, you get your money back. If you miss, it goes where you said it should. The app now runs as a single Next.js deployment with server-side API routes, designed for a simple Vercel-first PoC.
 
 ## How It Works
 
-1. Connect your wallet and Strava account
-2. Set your goal, deadline, stake, and penalty recipient
-3. Approve USDC and create the pact — funds go into escrow on Base
-4. Oracle checks Strava after deadline and calls `resolve()` on-chain
-5. Goal met → USDC returned. Goal missed → USDC sent to penalty recipient.
+1. Connect your wallet and Strava account.
+2. Create a pact and lock USDC in the contract.
+3. The app checks Strava progress through server-side API routes.
+4. After the deadline, the oracle flow calls `resolve()` on-chain.
+5. Goal met returns funds. Goal missed sends them to the penalty recipient.
 
-## Quick Start
+## Local Run
 
-**Install dependencies**
-
-```bash
-# Contracts
-cd contracts && forge install
-
-# Backend
-cd backend && npm install
-
-# Frontend
-cd frontend && npm install
-```
-
-**Configure environment**
+Install app dependencies at the repo root:
 
 ```bash
-# backend/.env
-STRAVA_CLIENT_ID=your_strava_client_id
-STRAVA_CLIENT_SECRET=your_strava_client_secret
-STRAVA_REDIRECT_URI=http://localhost:3001/api/strava/callback
-FRONTEND_URL=http://localhost:3000
-RPC_URL=https://mainnet.base.org
-ORACLE_PRIVATE_KEY=0x...
-CONTRACT_ADDRESS=0x...
-DB_PATH=./pact.db
-PORT=3001
-
-# frontend/.env.local
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
-NEXT_PUBLIC_API_URL=http://localhost:3001
+npm install
 ```
 
-**Deploy the contract**
+Install contract dependencies if needed:
 
 ```bash
 cd contracts
-ORACLE_ADDRESS=0x... forge script script/Deploy.s.sol \
-  --rpc-url https://mainnet.base.org \
-  --private-key 0x... \
-  --broadcast --verify
+forge install
 ```
 
-**Run**
+Create `.env.local` in the repo root:
 
 ```bash
-# Terminal 1
-cd backend && npm start
+NEXT_PUBLIC_ONCHAINKIT_API_KEY=
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
 
-# Terminal 2
-cd frontend && npm run dev
+RPC_URL=https://mainnet.base.org
+CONTRACT_ADDRESS=0x...
+ORACLE_PRIVATE_KEY=0x...
+
+STRAVA_CLIENT_ID=
+STRAVA_CLIENT_SECRET=
+STRAVA_REDIRECT_URI=http://localhost:3000/api/strava/callback
+
+CRON_SECRET=
+STRAVA_CONNECTIONS_JSON=[]
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Run the app:
 
-## What You Need
+```bash
+npm run dev
+```
 
-**Strava API app** — create one at [strava.com/settings/api](https://www.strava.com/settings/api). Set the callback domain to your deployed backend URL. The `Authorization Callback Domain` field must match your `STRAVA_REDIRECT_URI`.
-
-**WalletConnect Project ID** — free at [cloud.walletconnect.com](https://cloud.walletconnect.com). Required for wallet connection.
-
-**Oracle wallet** — a funded wallet that the backend uses to submit `resolve()` transactions on-chain. Needs ETH for gas. Generate one with `cast wallet new`.
-
-## Goal Types
-
-| Type | Unit | Example |
-|---|---|---|
-| Run Count | runs | Run 10 times |
-| Run Distance | miles | Run 100 miles |
-| Ride Count | rides | Ride 5 times |
-| Ride Distance | miles | Ride 200 miles |
-| Any Activity | activities | 20 any activities |
+Open `http://localhost:3000`.
 
 ## Deploying
 
-**Backend → Railway**
-Push to GitHub, connect to Railway, add env vars. Set `STRAVA_REDIRECT_URI` to your Railway URL.
+Deploy the repo root to Vercel.
 
-**Frontend → Vercel**
-Push to GitHub, connect to Vercel, add env vars. Set `NEXT_PUBLIC_API_URL` to your Railway backend URL.
+- The PoC is intended to run 100% on Vercel.
+- `vercel.json` schedules `/api/cron/verify` once per day to stay within Vercel Hobby limits.
+- If you need more frequent verification, call `/api/cron/verify` manually or from an external scheduler.
+
+## What You Need
+
+- Strava API app: create one at `strava.com/settings/api`. The callback domain must match the domain used in `STRAVA_REDIRECT_URI`.
+- WalletConnect Project ID: required for wallet connection.
+- Oracle wallet: funded wallet used to submit `resolve()` transactions on-chain.
+
+## PoC Storage Model
+
+This PoC does not use a database. Strava connections are seeded from `STRAVA_CONNECTIONS_JSON` and then kept in memory inside the server runtime.
+
+That means OAuth callback writes are not durable storage. They survive only for the lifetime of a warm instance.
 
 ## Tech Stack
 
-- **Contract** — Solidity, Foundry, deployed on Base
-- **Backend** — Node.js, Express, SQLite, ethers.js, node-cron
-- **Frontend** — Next.js 14 (App Router), wagmi v2, RainbowKit, Tailwind CSS
-- **USDC on Base** — `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
-
-## Testnet Deployment
-
-Contract deployed on Base Sepolia: [`0x5C19a7CAF15fE1Ed512C1fC8BbF43C63ad9b0d24`](https://base-sepolia.blockscout.com/address/0x5c19a7caf15fe1ed512c1fc8bbf43c63ad9b0d24)
+- Contract: Solidity, Foundry, Base
+- App: Next.js App Router, server route handlers, wagmi, OnchainKit, Tailwind CSS
+- USDC on Base: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`

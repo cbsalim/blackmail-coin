@@ -23,12 +23,10 @@ export default function GoalProgress({ pactId, goalType, targetValue, status }: 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-
   useEffect(() => {
     const fetchProgress = async () => {
       try {
-        const res = await fetch(`${apiUrl}/api/pacts/${pactId}/progress`)
+        const res = await fetch(`/api/pacts/${pactId}/progress`)
         if (!res.ok) {
           const data = await res.json()
           setError(data.error || 'Failed to load progress')
@@ -49,7 +47,7 @@ export default function GoalProgress({ pactId, goalType, targetValue, status }: 
       const interval = setInterval(fetchProgress, 5 * 60 * 1000)
       return () => clearInterval(interval)
     }
-  }, [pactId, status, apiUrl])
+  }, [pactId, status])
 
   if (loading) {
     return (

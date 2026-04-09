@@ -1,5 +1,8 @@
 # Dependencies
 node_modules/
+/.pnp
+.pnp.js
+.yarn/install-state.gz
 
 # Environment
 .env
@@ -10,6 +13,7 @@ node_modules/
 .next/
 out/
 dist/
+build/
 
 # Foundry
 contracts/out/
@@ -23,3 +27,16 @@ contracts/broadcast/
 
 # OS
 .DS_Store
+
+# Testing
+coverage/
+
+# Vercel
+.vercel
+
+# Logs and misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.pem
+*.tsbuildinfo

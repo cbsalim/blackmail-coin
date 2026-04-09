@@ -58,17 +58,15 @@ function CreatePageInner() {
     penaltyRecipient: '',
   })
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-
   useEffect(() => {
     if (!address) return
     setCheckingStrava(true)
-    fetch(`${apiUrl}/api/strava/status/${address}`)
+    fetch(`/api/strava/status/${address}`)
       .then((r) => r.json())
       .then((data) => setStravaConnected(data.connected))
       .catch(() => {})
       .finally(() => setCheckingStrava(false))
-  }, [address, apiUrl])
+  }, [address])
 
   useEffect(() => {
     if (searchParams.get('strava') === 'connected') setStravaConnected(true)
@@ -109,7 +107,7 @@ function CreatePageInner() {
 
   function handleConnectStrava() {
     if (!address) return
-    window.location.href = `${apiUrl}/api/strava/connect?wallet=${address}`
+    window.location.href = `/api/strava/connect?wallet=${address}`
   }
 
   function canProceedFromSetup() {
