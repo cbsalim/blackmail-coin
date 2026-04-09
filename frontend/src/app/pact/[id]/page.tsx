@@ -3,7 +3,15 @@
 export const dynamic = 'force-dynamic'
 
 import { use } from 'react'
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useReadContract } from 'wagmi'
+import { baseSepolia } from 'viem/chains'
+import {
+  Transaction,
+  TransactionButton,
+  TransactionStatus,
+  TransactionStatusLabel,
+  TransactionStatusAction,
+} from '@coinbase/onchainkit/transaction'
 import { CONTRACT_ADDRESS, PACT_ABI, GoalType, PactStatus, GOAL_TYPES, formatUsdc } from '@/lib/contract'
 import {
   formatGoalValue,
@@ -31,8 +39,6 @@ export default function PactDetailPage({ params }: PageProps) {
     args: [BigInt(pactId)],
   })
 
-  const { writeContract, data: txHash, isPending, error: writeError } = useWriteContract()
-  const { isLoading: isConfirming, isSuccess: confirmed } = useWaitForTransactionReceipt({ hash: txHash })
 
   if (isLoading) {
     return (
@@ -64,16 +70,6 @@ export default function PactDetailPage({ params }: PageProps) {
   const isActive = status === PactStatus.Active
   const deadlinePassed = Math.floor(Date.now() / 1000) > deadlineNum
   const canClaimExpired = isActive && isGracePeriodOver(deadlineNum)
-  function handleClaimExpired() {
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: PACT_ABI,
-      functionName: 'claimExpired',
-      args: [BigInt(pactId)],
-    })
-  }
-
-  if (confirmed) refetch()
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12">
@@ -148,18 +144,25 @@ export default function PactDetailPage({ params }: PageProps) {
       {/* Claim expired button */}
       {canClaimExpired && (
         <div className="space-y-3">
-          {writeError && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
-              {writeError.message.split('\n')[0]}
-            </div>
-          )}
-          <button
-            onClick={handleClaimExpired}
-            disabled={isPending || isConfirming}
-            className="w-full py-3 bg-black text-white font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-40"
+          <Transaction
+            chainId={baseSepolia.id}
+            calls={[{
+              address: CONTRACT_ADDRESS,
+              abi: PACT_ABI,
+              functionName: 'claimExpired',
+              args: [BigInt(pactId)],
+            }]}
+            onSuccess={() => refetch()}
           >
-            {isPending || isConfirming ? 'Processing…' : 'Claim Refund (Oracle Expired)'}
-          </button>
+            <TransactionButton
+              text="Claim Refund (Oracle Expired)"
+              className="w-full py-3 bg-black text-white font-medium rounded-xl hover:bg-gray-800 transition-colors"
+            />
+            <TransactionStatus>
+              <TransactionStatusLabel />
+              <TransactionStatusAction />
+            </TransactionStatus>
+          </Transaction>
           <p className="text-xs text-center text-gray-400">
             The oracle didn&apos;t respond in time. Anyone can trigger a refund to the creator.
           </p>

@@ -1,13 +1,12 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
+import { OnchainKitProvider } from '@coinbase/onchainkit'
 import { WagmiProvider } from 'wagmi'
+import { baseSepolia } from 'viem/chains'
 import { config } from '@/lib/wagmi'
 import { useState } from 'react'
 import Navbar from '@/components/Navbar'
-
-import '@rainbow-me/rainbowkit/styles.css'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient())
@@ -15,10 +14,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
+        <OnchainKitProvider
+          apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+          chain={baseSepolia}
+        >
           <Navbar />
           <main>{children}</main>
-        </RainbowKitProvider>
+        </OnchainKitProvider>
       </QueryClientProvider>
     </WagmiProvider>
   )

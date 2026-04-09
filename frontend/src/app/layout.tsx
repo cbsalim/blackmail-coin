@@ -1,13 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import dynamic from 'next/dynamic'
+import ClientLayout from './client-layout'
 
 const inter = Inter({ subsets: ['latin'] })
-
-// Load all wallet/wagmi providers client-side only to avoid WalletConnect
-// trying to access localStorage during SSR static generation.
-const ClientLayout = dynamic(() => import('./client-layout'), { ssr: false })
 
 export const metadata: Metadata = {
   title: 'Blackmail',

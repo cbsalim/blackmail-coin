@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useAccount, useReadContract, useReadContracts } from 'wagmi'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { ConnectWallet } from '@coinbase/onchainkit/wallet'
 import { CONTRACT_ADDRESS, PACT_ABI, PactStatus, GoalType } from '@/lib/contract'
 import PactCard, { PactData } from '@/components/PactCard'
 import Link from 'next/link'
@@ -62,7 +62,7 @@ export default function DashboardPage() {
       <div className="max-w-2xl mx-auto px-6 py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
         <p className="text-gray-500 mb-8">Connect your wallet to see your pacts.</p>
-        <ConnectButton />
+        <ConnectWallet />
       </div>
     )
   }

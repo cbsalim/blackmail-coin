@@ -1,24 +1,19 @@
-import { getDefaultConfig } from '@rainbow-me/rainbowkit'
-import {
-  coinbaseWallet,
-  metaMaskWallet,
-  rainbowWallet,
-  walletConnectWallet,
-} from '@rainbow-me/rainbowkit/wallets'
+import { createConfig, http } from 'wagmi'
 import { base, baseSepolia } from 'viem/chains'
+import { coinbaseWallet, injected } from 'wagmi/connectors'
 
-// Prefer the browser extension over Coinbase Smart Wallet
-coinbaseWallet.preference = 'eoaOnly'
-
-export const config = getDefaultConfig({
-  appName: 'Blackmail',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'default',
-  wallets: [
-    {
-      groupName: 'Recommended',
-      wallets: [coinbaseWallet, metaMaskWallet, rainbowWallet, walletConnectWallet],
-    },
-  ],
+export const config = createConfig({
   chains: [base, baseSepolia],
+  connectors: [
+    coinbaseWallet({
+      appName: 'Blackmail',
+      preference: 'eoaOnly', // browser extension, not smart wallet
+    }),
+    injected(),
+  ],
+  transports: {
+    [base.id]: http(),
+    [baseSepolia.id]: http(),
+  },
   ssr: true,
 })
