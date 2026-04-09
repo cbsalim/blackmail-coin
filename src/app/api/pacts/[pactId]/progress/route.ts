@@ -25,7 +25,7 @@ export async function GET(
       return NextResponse.json({ error: 'Pact not found' }, { status: 404 })
     }
 
-    if (!getConnection(pact.creator)) {
+    if (!(await getConnection(pact.creator))) {
       return NextResponse.json(
         { error: 'Strava not connected for this pact creator' },
         { status: 404 }

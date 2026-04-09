@@ -1,3 +1,5 @@
+import { kv } from '@vercel/kv'
+
 export interface StravaConnection {
   wallet: string
   stravaId: number | null
@@ -21,12 +23,19 @@ declare global {
   var __blackmailStravaStore: Map<string, StravaConnection> | undefined
 }
 
-function normalizeConnection(input: StravaConnectionInput): StravaConnection {
-  const wallet = `${input.wallet || ''}`.toLowerCase()
-  if (!/^0x[0-9a-fA-F]{40}$/.test(wallet)) {
-    throw new Error(`Invalid wallet in STRAVA_CONNECTIONS_JSON: ${input.wallet}`)
+const WALLET_INDEX_KEY = 'strava:wallets'
+
+function normalizeWallet(wallet: string): string {
+  const normalized = `${wallet || ''}`.toLowerCase()
+  if (!/^0x[0-9a-fA-F]{40}$/.test(normalized)) {
+    throw new Error(`Invalid wallet in STRAVA_CONNECTIONS_JSON: ${wallet}`)
   }
 
+  return normalized
+}
+
+function normalizeConnection(input: StravaConnectionInput): StravaConnection {
+  const wallet = normalizeWallet(`${input.wallet || ''}`)
   const accessToken = input.accessToken ?? input.access_token
   const refreshToken = input.refreshToken ?? input.refresh_token
   const expiresAt = Number(input.expiresAt ?? input.expires_at)
@@ -71,37 +80,89 @@ function parseSeedConnections(): Map<string, StravaConnection> {
   )
 }
 
-function getStore(): Map<string, StravaConnection> {
+function getMemoryStore(): Map<string, StravaConnection> {
   if (!globalThis.__blackmailStravaStore) {
     globalThis.__blackmailStravaStore = parseSeedConnections()
   }
+
   return globalThis.__blackmailStravaStore
 }
 
-export function getConnection(wallet: string): StravaConnection | null {
-  return getStore().get(wallet.toLowerCase()) ?? null
+function isKvConfigured(): boolean {
+  return Boolean(
+    (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) ||
+      (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
+  )
 }
 
-export function upsertConnection(
+function getConnectionKey(wallet: string): string {
+  return `strava:${normalizeWallet(wallet)}`
+}
+
+async function getWalletIndex(): Promise<string[]> {
+  if (!isKvConfigured()) {
+    return []
+  }
+
+  return (await kv.get<string[]>(WALLET_INDEX_KEY)) ?? []
+}
+
+async function addWalletToIndex(wallet: string): Promise<void> {
+  if (!isKvConfigured()) {
+    return
+  }
+
+  const normalizedWallet = normalizeWallet(wallet)
+  const wallets = await getWalletIndex()
+  if (wallets.includes(normalizedWallet)) {
+    return
+  }
+
+  await kv.set(WALLET_INDEX_KEY, [...wallets, normalizedWallet])
+}
+
+export async function getConnection(wallet: string): Promise<StravaConnection | null> {
+  const normalizedWallet = normalizeWallet(wallet)
+
+  if (isKvConfigured()) {
+    const stored = await kv.get<StravaConnectionInput>(getConnectionKey(normalizedWallet))
+    if (stored) {
+      return normalizeConnection({
+        ...stored,
+        wallet: normalizedWallet,
+      })
+    }
+  }
+
+  return getMemoryStore().get(normalizedWallet) ?? null
+}
+
+export async function upsertConnection(
   connection: Omit<StravaConnection, 'createdAt'> & { createdAt?: number }
-): StravaConnection {
+): Promise<StravaConnection> {
   const normalized = normalizeConnection(connection)
-  const existing = getConnection(normalized.wallet)
+  const existing = await getConnection(normalized.wallet)
 
   const nextValue: StravaConnection = {
     ...normalized,
     createdAt: existing?.createdAt ?? connection.createdAt ?? Math.floor(Date.now() / 1000),
   }
 
-  getStore().set(nextValue.wallet, nextValue)
+  if (isKvConfigured()) {
+    await kv.set(getConnectionKey(nextValue.wallet), nextValue)
+    await addWalletToIndex(nextValue.wallet)
+  } else {
+    getMemoryStore().set(nextValue.wallet, nextValue)
+  }
+
   return nextValue
 }
 
-export function updateTokens(
+export async function updateTokens(
   wallet: string,
   tokens: Pick<StravaConnection, 'accessToken' | 'refreshToken' | 'expiresAt'>
-): StravaConnection | null {
-  const existing = getConnection(wallet)
+): Promise<StravaConnection | null> {
+  const existing = await getConnection(wallet)
   if (!existing) {
     return null
   }
@@ -113,10 +174,29 @@ export function updateTokens(
     expiresAt: tokens.expiresAt,
   }
 
-  getStore().set(updated.wallet, updated)
+  if (isKvConfigured()) {
+    await kv.set(getConnectionKey(updated.wallet), updated)
+    await addWalletToIndex(updated.wallet)
+  } else {
+    getMemoryStore().set(updated.wallet, updated)
+  }
+
   return updated
 }
 
-export function getAllConnections(): StravaConnection[] {
-  return Array.from(getStore().values())
+export async function getAllConnections(): Promise<StravaConnection[]> {
+  if (!isKvConfigured()) {
+    return Array.from(getMemoryStore().values())
+  }
+
+  const wallets = new Set<string>([
+    ...parseSeedConnections().keys(),
+    ...(await getWalletIndex()),
+  ])
+
+  const connections = await Promise.all(
+    Array.from(wallets).map(async (wallet) => getConnection(wallet))
+  )
+
+  return connections.filter((connection): connection is StravaConnection => connection !== null)
 }

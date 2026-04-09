@@ -29,7 +29,7 @@ export async function POST(
       return NextResponse.json({ error: 'Pact is not active' }, { status: 400 })
     }
 
-    if (!getConnection(pact.creator)) {
+    if (!(await getConnection(pact.creator))) {
       return NextResponse.json(
         { error: 'No Strava connection for pact creator' },
         { status: 400 }

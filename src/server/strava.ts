@@ -54,7 +54,7 @@ async function refreshAccessToken(wallet: string, connection: StravaConnection):
     refresh_token: connection.refreshToken,
   })
 
-  updateTokens(wallet, {
+  await updateTokens(wallet, {
     accessToken: response.access_token,
     refreshToken: response.refresh_token,
     expiresAt: response.expires_at,
@@ -137,7 +137,7 @@ export async function getActivityProgress(
   goalType: GoalType,
   createdAt: number
 ): Promise<{ actual: number; activities: StravaActivity[] }> {
-  const connection = getConnection(wallet)
+  const connection = await getConnection(wallet)
   if (!connection) {
     throw new Error('No Strava connection for wallet')
   }

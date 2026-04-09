@@ -6,7 +6,7 @@ async function verifyPact(pactId: number, pact: Pact): Promise<
   | { pactId: number; status: 'skipped'; reason: string }
   | { pactId: number; status: 'resolved'; actualValue: number; txHash: string }
 > {
-  if (!getConnection(pact.creator)) {
+  if (!(await getConnection(pact.creator))) {
     return {
       pactId,
       status: 'skipped',

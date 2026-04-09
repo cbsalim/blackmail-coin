@@ -15,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: 'Invalid wallet address' }, { status: 400 })
   }
 
-  const connection = getConnection(wallet)
+  const connection = await getConnection(wallet)
 
   return NextResponse.json({
     connected: Boolean(connection),

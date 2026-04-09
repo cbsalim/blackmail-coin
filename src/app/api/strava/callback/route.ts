@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     const data = (await response.json()) as StravaOAuthResponse
 
-    upsertConnection({
+    await upsertConnection({
       wallet,
       stravaId: data.athlete?.id ?? null,
       accessToken: data.access_token,
