@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useAccount, useReadContract, useReadContracts } from 'wagmi'
 import { ConnectWallet } from '@coinbase/onchainkit/wallet'
+import { baseSepolia } from 'viem/chains'
 import { CONTRACT_ADDRESS, PACT_ABI, PactStatus, GoalType } from '@/lib/contract'
 import PactCard, { PactData } from '@/components/PactCard'
 import Link from 'next/link'
@@ -16,6 +17,7 @@ export default function DashboardPage() {
     address: CONTRACT_ADDRESS,
     abi: PACT_ABI,
     functionName: 'pactCount',
+    chainId: baseSepolia.id,
     query: { enabled: !!address },
   })
 
@@ -27,6 +29,7 @@ export default function DashboardPage() {
       abi: PACT_ABI,
       functionName: 'getPact' as const,
       args: [BigInt(i)] as const,
+      chainId: baseSepolia.id,
     })),
     query: { enabled: count > 0 && !!address },
   })

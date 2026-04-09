@@ -37,6 +37,7 @@ export default function PactDetailPage({ params }: PageProps) {
     abi: PACT_ABI,
     functionName: 'getPact',
     args: [BigInt(pactId)],
+    chainId: baseSepolia.id,
   })
 
 

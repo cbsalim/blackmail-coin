@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState, useMemo } from 'react'
 import { useReadContract, useReadContracts } from 'wagmi'
+import { baseSepolia } from 'viem/chains'
 import { CONTRACT_ADDRESS, PACT_ABI, PactStatus, GoalType } from '@/lib/contract'
 import PactCard, { PactData } from '@/components/PactCard'
 
@@ -16,6 +17,7 @@ export default function ExplorePage() {
     address: CONTRACT_ADDRESS,
     abi: PACT_ABI,
     functionName: 'pactCount',
+    chainId: baseSepolia.id,
   })
 
   const count = Number(pactCount ?? 0n)
@@ -26,6 +28,7 @@ export default function ExplorePage() {
       abi: PACT_ABI,
       functionName: 'getPact' as const,
       args: [BigInt(i)] as const,
+      chainId: baseSepolia.id,
     })),
     query: { enabled: count > 0 },
   })

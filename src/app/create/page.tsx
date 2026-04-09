@@ -93,6 +93,13 @@ function CreatePageInner() {
     query: { enabled: !!address },
   })
 
+  const { data: pactCountBeforeCreate } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: PACT_ABI,
+    functionName: 'pactCount',
+    chainId: baseSepolia.id,
+  })
+
   const allowanceSatisfied = stakeAmount > 0n && (allowance ?? 0n) >= stakeAmount
   const isOnWrongNetwork = isConnected && chainId !== baseSepolia.id
 
@@ -161,7 +168,19 @@ function CreatePageInner() {
         if (logs.length > 0) { pactId = Number(logs[0].args.pactId); break }
       } catch {}
     }
-    setCreatedPactId(pactId)
+
+    if (pactId === null && pactCountBeforeCreate !== undefined) {
+      pactId = Number(pactCountBeforeCreate)
+    }
+
+    setTxError(null)
+
+    if (pactId !== null) {
+      setCreatedPactId(pactId)
+      return
+    }
+
+    router.push('/dashboard')
   }
 
   const stepIndex = STEPS.indexOf(step)
