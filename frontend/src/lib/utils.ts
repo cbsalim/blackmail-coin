@@ -1,11 +1,11 @@
-import { GoalType, GOAL_TYPES, PactStatus, metersToKm } from './contract'
+import { GoalType, GOAL_TYPES, PactStatus, metersToMiles } from './contract'
 
 export function formatGoalValue(value: bigint, goalType: GoalType): string {
   const option = GOAL_TYPES.find((g) => g.value === goalType)
   if (!option) return value.toString()
 
   if (option.isDistance) {
-    return `${metersToKm(value).toFixed(1)} km`
+    return `${metersToMiles(value).toFixed(1)} miles`
   }
   return `${value.toString()} ${option.unit}`
 }

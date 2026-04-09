@@ -149,9 +149,9 @@ export interface GoalTypeOption {
 
 export const GOAL_TYPES: GoalTypeOption[] = [
   { value: GoalType.RunCount, label: 'Run Count', unit: 'runs', isDistance: false },
-  { value: GoalType.RunDistance, label: 'Run Distance', unit: 'km', isDistance: true },
+  { value: GoalType.RunDistance, label: 'Run Distance', unit: 'miles', isDistance: true },
   { value: GoalType.RideCount, label: 'Ride Count', unit: 'rides', isDistance: false },
-  { value: GoalType.RideDistance, label: 'Ride Distance', unit: 'km', isDistance: true },
+  { value: GoalType.RideDistance, label: 'Ride Distance', unit: 'miles', isDistance: true },
   { value: GoalType.AnyActivityCount, label: 'Any Activity', unit: 'activities', isDistance: false },
 ]
 
@@ -163,13 +163,13 @@ export const PRESET_PENALTY_RECIPIENTS: { label: string; address: `0x${string}` 
 // USDC has 6 decimals
 export const USDC_DECIMALS = 6
 
-// km to meters for distance goals
-export function kmToMeters(km: number): bigint {
-  return BigInt(Math.round(km * 1000))
+// miles to meters for distance goals (1 mile = 1609.344 m)
+export function milesToMeters(miles: number): bigint {
+  return BigInt(Math.round(miles * 1609.344))
 }
 
-export function metersToKm(meters: bigint): number {
-  return Number(meters) / 1000
+export function metersToMiles(meters: bigint): number {
+  return Number(meters) / 1609.344
 }
 
 export function formatUsdc(amount: bigint): string {

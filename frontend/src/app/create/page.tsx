@@ -16,7 +16,7 @@ import {
   GoalType,
   PRESET_PENALTY_RECIPIENTS,
   parseUsdc,
-  kmToMeters,
+  milesToMeters,
 } from '@/lib/contract'
 
 type Step = 'setup' | 'goal' | 'financial' | 'confirm'
@@ -74,7 +74,7 @@ export default function CreatePage() {
 
   // Compute on-chain values
   const targetValue = isDistanceGoal
-    ? kmToMeters(parseFloat(form.targetInput) || 0)
+    ? milesToMeters(parseFloat(form.targetInput) || 0)
     : BigInt(parseInt(form.targetInput) || 0)
   const stakeAmount = parseUsdc(form.stakeInput || '0')
   const deadlineTimestamp = form.deadlineDate
@@ -347,11 +347,11 @@ export default function CreatePage() {
               step={isDistanceGoal ? '0.1' : '1'}
               value={form.targetInput}
               onChange={(e) => setForm((f) => ({ ...f, targetInput: e.target.value }))}
-              placeholder={isDistanceGoal ? 'e.g. 50' : 'e.g. 5'}
+              placeholder={isDistanceGoal ? 'e.g. 100' : 'e.g. 5'}
               className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:border-black"
             />
             <p className="text-xs text-gray-400 mt-1">
-              {isDistanceGoal ? 'Enter distance in km (e.g. 50 for 50 km)' : `Number of ${goalOption.unit}`}
+              {isDistanceGoal ? 'Enter distance in miles (e.g. 100 for 100 miles)' : `Number of ${goalOption.unit}`}
             </p>
           </div>
 
