@@ -70,7 +70,32 @@ function CreatePageInner() {
   }, [address])
 
   useEffect(() => {
-    if (searchParams.get('strava') === 'connected') setStravaConnected(true)
+    if (searchParams.get('strava') !== 'connected') return
+    setStravaConnected(true)
+
+    const accessToken = searchParams.get('strava_access_token')
+    const wallet = searchParams.get('strava_wallet')
+    if (!accessToken || !wallet) return
+
+    fetch('/api/strava/manual-connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        wallet,
+        accessToken,
+        refreshToken: searchParams.get('strava_refresh_token') ?? accessToken,
+        stravaId: searchParams.get('strava_id') ? Number(searchParams.get('strava_id')) : null,
+      }),
+    }).catch(() => {})
+
+    // Clean up token params from URL
+    const cleanUrl = new URL(window.location.href)
+    cleanUrl.searchParams.delete('strava_wallet')
+    cleanUrl.searchParams.delete('strava_access_token')
+    cleanUrl.searchParams.delete('strava_refresh_token')
+    cleanUrl.searchParams.delete('strava_expires_at')
+    cleanUrl.searchParams.delete('strava_id')
+    window.history.replaceState({}, '', cleanUrl.toString())
   }, [searchParams])
 
   const goalOption = GOAL_TYPES.find((g) => g.value === form.goalType)!

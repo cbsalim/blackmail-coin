@@ -60,6 +60,13 @@ export async function GET(request: NextRequest) {
     })
 
     createUrl.searchParams.set('strava', 'connected')
+    createUrl.searchParams.set('strava_wallet', wallet)
+    createUrl.searchParams.set('strava_access_token', data.access_token)
+    createUrl.searchParams.set('strava_refresh_token', data.refresh_token)
+    createUrl.searchParams.set('strava_expires_at', String(data.expires_at))
+    if (data.athlete?.id) {
+      createUrl.searchParams.set('strava_id', String(data.athlete.id))
+    }
     return NextResponse.redirect(createUrl)
   } catch (error) {
     console.error('Strava OAuth error:', error)
