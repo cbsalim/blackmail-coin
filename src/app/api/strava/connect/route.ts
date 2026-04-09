@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
     client_id: getRequiredEnv('STRAVA_CLIENT_ID'),
     redirect_uri: redirectUri,
     response_type: 'code',
-    approval_prompt: 'auto',
-    scope: 'activity:read_all',
+    approval_prompt: 'force',
+    scope: 'read,activity:read_all',
     state: wallet,
   })
 

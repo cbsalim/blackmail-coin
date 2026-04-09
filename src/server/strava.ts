@@ -18,6 +18,17 @@ interface StravaActivity {
   distance: number
 }
 
+function formatStravaError(body: string): string {
+  if (
+    body.includes('"message":"Authorization Error"') &&
+    body.includes('"field":"activity:read_permission"')
+  ) {
+    return 'Strava token is missing activity read permission. Reconnect Strava and approve activity access.'
+  }
+
+  return body
+}
+
 async function postJson<T>(url: string, body: Record<string, string>): Promise<T> {
   const response = await fetch(url, {
     method: 'POST',
@@ -84,7 +95,7 @@ export async function fetchAllActivities(
     })
 
     if (!response.ok) {
-      throw new Error(await response.text())
+      throw new Error(formatStravaError(await response.text()))
     }
 
     const batch = (await response.json()) as StravaActivity[]

@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useChainId, useReadContract } from 'wagmi'
 import { ConnectWallet } from '@coinbase/onchainkit/wallet'
 import {
   Transaction,
@@ -42,6 +42,7 @@ const STEP_LABELS = ['Setup', 'Goal', 'Financial', 'Confirm']
 
 function CreatePageInner() {
   const { address, isConnected } = useAccount()
+  const chainId = useChainId()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -83,14 +84,28 @@ function CreatePageInner() {
     ? BigInt(Math.floor(new Date(form.deadlineDate).getTime() / 1000))
     : 0n
 
-  // Always approve + create — OnchainKit sequences them
-  const contracts = useMemo(() => [
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'allowance',
+    args: address ? [address, CONTRACT_ADDRESS] : undefined,
+    chainId: baseSepolia.id,
+    query: { enabled: !!address },
+  })
+
+  const allowanceSatisfied = stakeAmount > 0n && (allowance ?? 0n) >= stakeAmount
+  const isOnWrongNetwork = isConnected && chainId !== baseSepolia.id
+
+  const approveCalls = useMemo(() => [
     {
       address: USDC_ADDRESS,
       abi: ERC20_ABI,
       functionName: 'approve' as const,
       args: [CONTRACT_ADDRESS, stakeAmount] as const,
     },
+  ], [stakeAmount])
+
+  const createCalls = useMemo(() => [
     {
       address: CONTRACT_ADDRESS,
       abi: PACT_ABI,
@@ -104,6 +119,10 @@ function CreatePageInner() {
       ] as const,
     },
   ], [stakeAmount, form.goalType, targetValue, deadlineTimestamp, form.penaltyRecipient])
+
+  useEffect(() => {
+    setTxError(null)
+  }, [address, chainId, form.goalType, form.targetInput, form.deadlineDate, form.stakeInput, form.penaltyRecipient])
 
   function handleConnectStrava() {
     if (!address) return
@@ -410,6 +429,12 @@ function CreatePageInner() {
             </div>
           )}
 
+          {isOnWrongNetwork && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+              Switch your wallet to Base Sepolia before approving or creating the pact.
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button
               onClick={() => setStep('financial')}
@@ -418,21 +443,49 @@ function CreatePageInner() {
               Back
             </button>
             <div className="flex-1">
-              <Transaction
-                chainId={baseSepolia.id}
-                calls={contracts}
-                onSuccess={handleSuccess}
-                onError={(e) => setTxError(e.message)}
-              >
-                <TransactionButton
-                  text="Approve & Create Pact"
-                  className="w-full py-3 bg-black text-white font-medium rounded-xl hover:bg-gray-800 transition-colors"
-                />
-                <TransactionStatus>
-                  <TransactionStatusLabel />
-                  <TransactionStatusAction />
-                </TransactionStatus>
-              </Transaction>
+              {isOnWrongNetwork ? (
+                <button
+                  disabled
+                  className="w-full py-3 bg-gray-200 text-gray-500 font-medium rounded-xl cursor-not-allowed"
+                >
+                  Switch to Base Sepolia
+                </button>
+              ) : !allowanceSatisfied ? (
+                <Transaction
+                  chainId={baseSepolia.id}
+                  calls={approveCalls}
+                  onSuccess={() => {
+                    refetchAllowance()
+                    setTxError(null)
+                  }}
+                  onError={(e) => setTxError(e.message)}
+                >
+                  <TransactionButton
+                    text="Step 1: Approve USDC"
+                    className="w-full py-3 bg-black text-white font-medium rounded-xl hover:bg-gray-800 transition-colors"
+                  />
+                  <TransactionStatus>
+                    <TransactionStatusLabel />
+                    <TransactionStatusAction />
+                  </TransactionStatus>
+                </Transaction>
+              ) : (
+                <Transaction
+                  chainId={baseSepolia.id}
+                  calls={createCalls}
+                  onSuccess={handleSuccess}
+                  onError={(e) => setTxError(e.message)}
+                >
+                  <TransactionButton
+                    text="Step 2: Create Pact"
+                    className="w-full py-3 bg-black text-white font-medium rounded-xl hover:bg-gray-800 transition-colors"
+                  />
+                  <TransactionStatus>
+                    <TransactionStatusLabel />
+                    <TransactionStatusAction />
+                  </TransactionStatus>
+                </Transaction>
+              )}
             </div>
           </div>
         </div>
