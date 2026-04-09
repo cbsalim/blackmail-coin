@@ -212,10 +212,12 @@ function CreatePageInner() {
           </div>
 
           <div className="border border-gray-200 rounded-xl p-5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-medium">Strava</p>
-                <p className="text-sm text-gray-500">Required to verify your activities</p>
+                <p className="text-sm text-gray-500">
+                  Demo path: preload this wallet in <code>STRAVA_CONNECTIONS_JSON</code>.
+                </p>
               </div>
               {checkingStrava ? (
                 <span className="text-gray-400 text-sm">Checking...</span>
@@ -231,6 +233,12 @@ function CreatePageInner() {
                 </button>
               )}
             </div>
+            {!stravaConnected && isConnected && !checkingStrava && (
+              <p className="text-xs text-gray-400 mt-3">
+                For the demo, use the same wallet address here and in <code>STRAVA_CONNECTIONS_JSON</code>.
+                Live OAuth is still available, but not required.
+              </p>
+            )}
           </div>
 
           <button

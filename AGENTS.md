@@ -40,6 +40,7 @@ Public client env vars:
 NEXT_PUBLIC_ONCHAINKIT_API_KEY=
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
+NEXT_PUBLIC_USDC_ADDRESS=0x036CbD53842c5426634e7929541eC2318f3dCF7e
 ```
 
 Server env vars:
@@ -62,6 +63,7 @@ Notes:
 - `STRAVA_REDIRECT_URI` should be the deployed app URL plus `/api/strava/callback`.
 - `CRON_SECRET` is optional. If set, requests to `/api/cron/verify` must include `Authorization: Bearer <CRON_SECRET>`.
 - `STRAVA_CONNECTIONS_JSON` is the PoC storage layer. It seeds the in-memory Strava connection store on startup.
+- For demos, prefer preloading the demo wallet in `STRAVA_CONNECTIONS_JSON` and skipping live Strava OAuth.
 
 ## Example `STRAVA_CONNECTIONS_JSON`
 
